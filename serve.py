@@ -31,6 +31,11 @@ def download_blob(blob_name, download_path):
 
 # Paths where the joblib files will be downloaded/stored
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+artifacts_dir = os.path.join(BASE_DIR, 'artifacts')
+if not os.path.exists(artifacts_dir):
+    os.makedirs(artifacts_dir)
+    
 movie_list_path = os.path.join(BASE_DIR, 'artifacts', 'movie_list.joblib')
 similarity_matrix_path = os.path.join(BASE_DIR, 'artifacts', 'similarity.joblib')
 
