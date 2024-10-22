@@ -4,11 +4,11 @@ import pandas as pd
 import numpy as np
 import os
 from azure.storage.blob import BlobServiceClient
+from flask_cors import CORS
 
 # Initialize Flask application
 app = Flask(__name__)
-
-
+CORS(app)
 # Get Azure Blob Storage connection string and container name from environment variables
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
@@ -104,4 +104,4 @@ def recommend():
         return jsonify({"error": "An error occurred while processing the similarity matrix."}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run()

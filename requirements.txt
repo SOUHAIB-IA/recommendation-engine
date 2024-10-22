@@ -38,6 +38,7 @@ executing==2.1.0
 fastapi==0.115.0
 fastjsonschema==2.20.0
 Flask==3.0.3
+Flask-Cors==5.0.0
 flatbuffers==24.3.25
 fonttools==4.53.1
 frozenlist==1.4.1
@@ -109,6 +110,7 @@ pyparsing==3.1.4
 python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 pytz==2024.2
+pywin32==306; platform_system == "Windows"
 pywin32==306; platform_system == "Windows"
 pyzmq==26.2.0
 referencing==0.35.1
