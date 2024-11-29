@@ -325,7 +325,7 @@ def generate_data(sensor_type="temperature"):
                 data = {}
             
             yield f"data: {json.dumps(data)}\n\n"
-        time.sleep(545)
+        time.sleep(60)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000, threaded=True)
