@@ -92,7 +92,7 @@ humidity_data = []
 condictive_data=[]
 data_lock = threading.Lock()
 
-def simulate_temperature_sensor(model, initial_sequence, scaler, interval=40, steps=100):
+def simulate_temperature_sensor(model, initial_sequence, scaler, interval=1, steps=100):
     """
     Simulates a real-time temperature sensor using a trained model with added realism.
     """
@@ -127,7 +127,7 @@ def simulate_temperature_sensor(model, initial_sequence, scaler, interval=40, st
         interval_variation = np.random.uniform(0.9, 1.1) 
         time.sleep(interval * interval_variation)
 
-def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=40, steps=100):
+def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
     sequence = np.array(initial_sequence)
 
     for _ in range(steps):
@@ -157,7 +157,7 @@ def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=40, 
         interval_variation = np.random.uniform(0.9, 1.1)
         time.sleep(interval * interval_variation)
 
-def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, interval=40, steps=100):
+def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
     """
     Simulates a real-time electrical conductivity sensor using a trained model with added realism.
     
@@ -325,7 +325,7 @@ def generate_data(sensor_type="temperature"):
                 data = {}
             
             yield f"data: {json.dumps(data)}\n\n"
-        time.sleep(40)
+        time.sleep(1)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000, threaded=True)
