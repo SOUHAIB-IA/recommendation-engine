@@ -70,6 +70,8 @@ if not os.path.exists(similarity_matrix_path):
 
 if not os.path.exists(humidity_model_path):
     download_blob("humidity_model.joblib", humidity_model_path)
+if not os.path.exists(initial_sequenceH_path):
+    download_blob("initial_sequenceH.joblib",initial_sequenceH_path)
 try:
     movies = joblib.load(movie_list_path)
     similarity_matrix = joblib.load(similarity_matrix_path)
