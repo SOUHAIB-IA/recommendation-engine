@@ -4,12 +4,13 @@ import joblib
 import pandas as pd
 import json
 import numpy as np
+from flask_cors import CORS 
 import os
 from azure.storage.blob import BlobServiceClient
 import time
 
 app = Flask(__name__)
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
