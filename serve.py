@@ -222,28 +222,43 @@ def run_condective_simulation():
 def home():
     return "Welcome to the Movie Recommendation API!"
 
+simulation_threads = {
+    "temperature": None,
+    "humidity": None,
+    "conductivity": None
+}
+
 @app.route('/start_temp_simulation', methods=['GET'])
-def start_simulation():
+def start_temperature_simulation():
     simulated_data.clear()
+    
+    if simulation_threads["temperature"] is None or not simulation_threads["temperature"].is_alive():
+        simulation_threads["temperature"] = threading.Thread(target=run_simulation)
+        simulation_threads["temperature"].start()
 
-    simulation_thread = threading.Thread(target=run_simulation)
-    simulation_thread.start()
+    return Response(generate_data("temperature"), content_type='text/event-stream')
 
-    return Response(generate_data(), content_type='text/event-stream')
 
 @app.route('/start_humidity_simulation', methods=['GET'])
 def start_humidity_simulation():
     humidity_data.clear()
-    simulation_thread = threading.Thread(target=run_humidity_simulation)
-    simulation_thread.start()
+
+    if simulation_threads["humidity"] is None or not simulation_threads["humidity"].is_alive():
+        simulation_threads["humidity"] = threading.Thread(target=run_humidity_simulation)
+        simulation_threads["humidity"].start()
+
     return Response(generate_data("humidity"), content_type='text/event-stream')
+
 
 @app.route('/start_conductivity_simulation', methods=['GET'])
 def start_conductivity_simulation():
-    humidity_data.clear()
-    simulation_thread = threading.Thread(target=run_condective_simulation)
-    simulation_thread.start()
-    return Response(generate_data("condec"), content_type='text/event-stream')
+    condictive_data.clear()
+
+    if simulation_threads["conductivity"] is None or not simulation_threads["conductivity"].is_alive():
+        simulation_threads["conductivity"] = threading.Thread(target=run_condective_simulation)
+        simulation_threads["conductivity"].start()
+
+    return Response(generate_data("conductivity"), content_type='text/event-stream')
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
@@ -295,18 +310,22 @@ def recommend():
         return jsonify({"error": "An error occurred while processing the similarity matrix."}), 500
 
 def generate_data(sensor_type="temperature"):
+    """
+    Streams sensor data based on the sensor type.
+    """
     while True:
         with data_lock:
             if sensor_type == "temperature" and simulated_data:
                 data = {"temperature": simulated_data[-1]}
             elif sensor_type == "humidity" and humidity_data:
                 data = {"humidity": humidity_data[-1]}
-            elif sensor_type == "condec" and condictive_data:
-                data={"conductivity":condictive_data[-1]}
+            elif sensor_type == "conductivity" and condictive_data:
+                data = {"conductivity": condictive_data[-1]}
             else:
                 data = {}
+            
             yield f"data: {json.dumps(data)}\n\n"
-        time.sleep(1)
+        time.sleep(545)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000, threaded=True)
