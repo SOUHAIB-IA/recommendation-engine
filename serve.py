@@ -193,7 +193,7 @@ def simulate_co2_sensor(model, initial_sequence, scaler, interval=5, steps=100):
 
     
 
-def simulate_env_temperature_sensor(model, initial_sequence, scaler, interval=540, steps=100):
+def simulate_env_temperature_sensor(model, initial_sequence, scaler, interval=5, steps=100):
     """
     Simulates a real-time temperature sensor using a trained model with added realism.
     """
@@ -227,7 +227,7 @@ def simulate_env_temperature_sensor(model, initial_sequence, scaler, interval=54
        
         interval_variation = np.random.uniform(0.9, 1.1) 
         time.sleep(interval * interval_variation)
-def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, interval=540, steps=100):
+def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, interval=5, steps=100):
     """
     Simulates environmental humidity with variations typical of Morocco's climate.
     
@@ -291,7 +291,7 @@ def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, inte
         time.sleep(interval * interval_variation)
 
 
-def simulate_temperature_sensor(model, initial_sequence, scaler, interval=540, steps=100):
+def simulate_temperature_sensor(model, initial_sequence, scaler, interval=5, steps=100):
     """
     Simulates a real-time temperature sensor using a trained model with added realism.
     """
@@ -326,7 +326,7 @@ def simulate_temperature_sensor(model, initial_sequence, scaler, interval=540, s
         interval_variation = np.random.uniform(0.9, 1.1) 
         time.sleep(interval * interval_variation)
 
-def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
+def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=5, steps=100):
     sequence = np.array(initial_sequence)
 
     for _ in range(steps):
@@ -356,7 +356,7 @@ def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, s
         interval_variation = np.random.uniform(0.9, 1.1)
         time.sleep(interval * interval_variation)
 
-def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
+def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, interval=5, steps=100):
     """
     Simulates a real-time electrical conductivity sensor using a trained model with added realism.
     
