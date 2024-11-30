@@ -57,7 +57,13 @@ env_tempra_model_path=os.path.join(BASE_DIR,'artifacts','env_temperature_model.j
 env_temperature_initial_sequence_path=os.path.join(BASE_DIR,'artifacts','env_temperature_initial_sequence.joblib')
 env_humidity_model_path = os.path.join(BASE_DIR, 'artifacts', 'env_humidity_model.joblib')
 env_humidity_initial_sequence_path= os.path.join(BASE_DIR, 'artifacts', 'env_humidity_initial_sequence.joblib')
+ann_model_path=os.path.join(BASE_DIR,'artifacts','ann_model.joblib')
+StandardScaler_path=os.path.join(BASE_DIR,'artifacts','StandardScaler.joblib')
 
+if not os.path.exists(ann_model_path):
+    download_blob('ann_model.joblib',ann_model_path)
+if not os.path.exists(StandardScaler_path):
+    download_blob('StandardScaler.joblib',StandardScaler_path)
 if not os.path.exists(env_humidity_model_path):
     download_blob('env_humidity_model.joblib',env_humidity_model_path)
 
@@ -119,7 +125,9 @@ try:
     env_temperature_initial_sequence=joblib.load(env_temperature_initial_sequence_path)
     env_humidity_initial_sequence=joblib.load(env_humidity_initial_sequence_path)
     env_humidity_model=joblib.load(env_humidity_model_path)
-    
+    ann_model=joblib.load(ann_model_path)
+    StandardScaler=joblib.load(StandardScaler_path)
+
 except Exception as e:
     print(f"Error loading model files: {e}")
     raise
@@ -436,6 +444,7 @@ simulation_threads = {
     "env_humidity": None
 }
 
+
 # Enhanced streaming mechanism
 def generate_data(sensor_type):
     while True:
@@ -446,6 +455,100 @@ def generate_data(sensor_type):
             else:
                 yield f"data: {json.dumps({})}\n\n"
         time.sleep(0.5)  # Reduced sleep time for faster streaming
+
+
+
+#model, 
+def prepare_single_row_for_prediction(features_array, model, scaler):
+    # Define class names inside the function
+    class_names = ['irrigation_ALERT', 'irrigation_No adjustment', 'irrigation_OFF', 'irrigation_ON']
+    
+    feature_names = ['electrical_conductivity', 'soil_moisture', 'soil_temperature', 'env_humidity', 
+                          'env_temperature', 'precipitations_mm', 'humidity', 'et0_fao']
+    features_df = pd.DataFrame([features_array], columns=feature_names)
+    
+    features_df = features_df.fillna(features_df.mean())
+   
+    features_df['temp_difference'] = features_df['env_temperature'] - features_df['soil_temperature']
+    features_df['irrigation_irrigation_ALERT'] = 0
+    features_df['irrigation_irrigation_No adjustment'] = 0
+    features_df['irrigation_irrigation_OFF'] = 0
+    features_df['irrigation_irrigation_ON'] = 0
+    
+    numerical_features = ['electrical_conductivity', 'soil_moisture', 'soil_temperature', 'env_humidity', 
+                          'env_temperature', 'precipitations_mm', 'humidity', 'et0_fao', 'temp_difference']
+                
+    features_df[numerical_features] = scaler.fit_transform(features_df[numerical_features])
+
+    prediction = model.predict(features_df)
+    
+    # Get the index of the predicted class
+    predicted_index = np.argmax(prediction, axis=1)[0]
+    
+    # Map the index to the class name
+    predicted_class = class_names[predicted_index]
+    
+    return predicted_class
+
+@app.route('/predict_irrigation', methods=['POST'])
+def predict_irrigation():
+    """
+    Real-time prediction route for irrigation recommendation.
+    
+    Expects a JSON payload with feature values:
+    {
+        "features": [
+            electrical_conductivity, 
+            soil_moisture, 
+            soil_temperature, 
+            env_humidity, 
+            env_temperature, 
+            precipitations_mm, 
+            humidity, 
+            et0_fao
+        ]
+    }
+    
+    Returns the predicted irrigation recommendation.
+    """
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        
+        # Validate input
+        if 'features' not in data or len(data['features']) != 8:
+            return jsonify({
+                "error": "Invalid input. Exactly 8 feature values are required.",
+                "expected_features": [
+                    "electrical_conductivity", 
+                    "soil_moisture", 
+                    "soil_temperature", 
+                    "env_humidity", 
+                    "env_temperature", 
+                    "precipitations_mm", 
+                    "humidity", 
+                    "et0_fao"
+                ]
+            }), 400
+        
+        # Prepare features and make prediction
+        prediction = prepare_single_row_for_prediction(
+            data['features'], 
+            ann_model,  # Using the conductivity model for prediction
+            StandardScaler
+        )
+        
+        return jsonify({
+            "prediction": prediction,
+            "message": "Irrigation prediction successful"
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Prediction error: {str(e)}")
+        return jsonify({
+            "error": "An error occurred during prediction",
+            "details": str(e)
+        }), 500
 
 @app.route('/')
 def home():
