@@ -11,14 +11,14 @@ import time
 from datetime import datetime
 from collections import deque
 from flask_cors import CORS
-from flask_compress import Compress
+
 
 
 
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-Compress(app)
+
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 
