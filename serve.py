@@ -122,7 +122,6 @@ try:
     initial_sequenceH = joblib.load(initial_sequenceH_path)
     condic_model=joblib.load(condec_model_path)
     initial_sequenceD=joblib.load(initial_sequenceD_path)
-
     co2_model=joblib.load(env_co2_model_path)
     env_initial_sequenceCO2=joblib.load(env_initial_sequenceCO2_path)
     env_tempra_model=joblib.load(env_tempra_model_path)
