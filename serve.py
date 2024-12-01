@@ -11,14 +11,14 @@ import time
 from datetime import datetime
 from collections import deque
 from flask_cors import CORS
-import concurrent.futures
-from sklearn.preprocessing import LabelEncoder
+from flask_compress import Compress
+
 
 
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-
+Compress(app)
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 
@@ -63,6 +63,10 @@ env_humidity_model_path = os.path.join(BASE_DIR, 'artifacts', 'env_humidity_mode
 env_humidity_initial_sequence_path= os.path.join(BASE_DIR, 'artifacts', 'env_humidity_initial_sequence.joblib')
 ann_model_path=os.path.join(BASE_DIR,'artifacts','ann_model.joblib')
 StandardScaler_path=os.path.join(BASE_DIR,'artifacts','StandardScaler.joblib')
+label_encoder_path=os.path.join(BASE_DIR,'artifacts','label_encoder.joblib')
+
+if not os.path.exists(label_encoder_path):
+    download_blob('label_encoder.joblib',label_encoder_path)
 
 if not os.path.exists(ann_model_path):
     download_blob('ann_model.joblib',ann_model_path)
@@ -131,74 +135,23 @@ try:
     env_humidity_model=joblib.load(env_humidity_model_path)
     ann_model=joblib.load(ann_model_path)
     StandardScaler=joblib.load(StandardScaler_path)
+    label_encoder=joblib.load(label_encoder_path)
 
 except Exception as e:
     print(f"Error loading model files: {e}")
     raise
 
+MAX_BUFFER_SIZE = 100
+simulated_data = {
+    "temperature": deque(maxlen=MAX_BUFFER_SIZE),
+    "humidity": deque(maxlen=MAX_BUFFER_SIZE),
+    "conductivity": deque(maxlen=MAX_BUFFER_SIZE),
+    "env_co2": deque(maxlen=MAX_BUFFER_SIZE),
+    "env_temperature": deque(maxlen=MAX_BUFFER_SIZE),
+    "env_humidity": deque(maxlen=MAX_BUFFER_SIZE)
+}
+data_lock = threading.Lock()
 
-class EnhancedSensorSimulator:
-    def __init__(self, max_buffer_size=100):
-        self.simulated_data = {
-            "temperature": deque(maxlen=max_buffer_size),
-            "humidity": deque(maxlen=max_buffer_size),
-            "conductivity": deque(maxlen=max_buffer_size),
-            "env_co2": deque(maxlen=max_buffer_size),
-            "env_temperature": deque(maxlen=max_buffer_size),
-            "env_humidity": deque(maxlen=max_buffer_size)
-        }
-        self.data_lock = threading.Lock()
-        self.simulation_threads = {
-            "temperature": None,
-            "humidity": None,
-            "conductivity": None,
-            "env_co2": None,
-            "env_temperature": None,
-            "env_humidity": None
-        }
-        self.stop_event = threading.Event()
-
-    def start_all_simulations(self):
-        """Start all sensor simulations concurrently"""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-            simulation_functions = [
-                run_simulation,
-                run_humidity_simulation,
-                run_condective_simulation,
-                run_env_co2_simulation,
-                run_env_temperature_simulation,
-                run_env_humidity_simulation
-            ]
-            executor.map(self._start_simulation, simulation_functions)
-
-    def _start_simulation(self, simulation_func):
-        """Internal method to start a single simulation"""
-        thread = threading.Thread(target=simulation_func)
-        thread.daemon = True
-        thread.start()
-
-    def generate_data(self, sensor_type):
-        """Enhanced data generation with backpressure and faster streaming"""
-        while not self.stop_event.is_set():
-            with self.data_lock:
-                if self.simulated_data.get(sensor_type):
-                    data = {sensor_type: self.simulated_data[sensor_type][-1]}
-                    yield f"data: {json.dumps(data)}\n\n"
-                else:
-                    yield f"data: {json.dumps({})}\n\n"
-            time.sleep(0.1)  # Reduced sleep time for faster streaming
-
-    def get_latest_sensor_data(self):
-        """Retrieve latest data for all sensors"""
-        latest_data = {}
-        with self.data_lock:
-            for sensor_type, data in self.simulated_data.items():
-                if data:
-                    latest_data[sensor_type] = data[-1]
-        return latest_data
-
-# Global simulator instance
-sensor_simulator = EnhancedSensorSimulator()
 
 def simulate_co2_sensor(model, initial_sequence, scaler, interval=1, steps=100):
     """
@@ -245,8 +198,8 @@ def simulate_co2_sensor(model, initial_sequence, scaler, interval=1, steps=100):
 
         # Constrain CO2 values to realistic range
         next_co2 = max(min(next_co2, 500), 400)
-        with sensor_simulator.data_lock:
-            sensor_simulator.simulated_data["env_co2"].append(next_co2)
+        with data_lock:
+            simulated_data["env_co2"].append(next_co2)
 
         # Update sequence for next prediction
         sequence = np.roll(sequence, -1)
@@ -283,8 +236,8 @@ def simulate_env_temperature_sensor(model, initial_sequence, scaler, interval=1,
         if np.random.rand() < 0.1:
             next_temperature += np.random.choice([-5, 5])
 
-        with sensor_simulator.data_lock:
-           sensor_simulator.simulated_data["env_temperature"].append(next_temperature)
+        with data_lock:
+           simulated_data["env_temperature"].append(next_temperature)
         sequence = np.roll(sequence, -1) 
         sequence[-1] = next_scaled_value[0] 
 
@@ -343,8 +296,8 @@ def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, inte
         # Occasional more significant fluctuations
         if np.random.rand() < 0.1:
             next_humidity += np.random.choice([-15, 15])
-        with sensor_simulator.data_lock:
-            sensor_simulator.simulated_data["env_humidity"].append(next_humidity)
+        with data_lock:
+            simulated_data["env_humidity"].append(next_humidity)
 
         # Update sequence for next prediction
         sequence = np.roll(sequence, -1)
@@ -381,8 +334,8 @@ def simulate_temperature_sensor(model, initial_sequence, scaler, interval=1, ste
         if np.random.rand() < 0.1:
             next_temperature += np.random.choice([-5, 5])
 
-        with sensor_simulator.data_lock:
-            sensor_simulator.simulated_data["temperature"].append(next_temperature)
+        with data_lock:
+            simulated_data["temperature"].append(next_temperature)
         sequence = np.roll(sequence, -1) 
         sequence[-1] = next_scaled_value[0] 
 
@@ -411,8 +364,8 @@ def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, s
         if np.random.rand() < 0.1:
             next_humidity += np.random.choice([-10, 10])
 
-        with sensor_simulator.data_lock:
-            sensor_simulator.simulated_data["humidity"].append(next_humidity)
+        with data_lock:
+            simulated_data["humidity"].append(next_humidity)
 
         sequence = np.roll(sequence, -1)
         sequence[-1] = next_scaled_value[0]
@@ -461,8 +414,8 @@ def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, int
             next_conductivity += np.random.choice([-0.5, 0.5])  # Sudden change in conductivity
         
         # Store the simulated conductivity value
-        with sensor_simulator.data_lock:
-            sensor_simulator.simulated_data["conductivity"].append(next_conductivity)
+        with data_lock:
+            simulated_data["conductivity"].append(next_conductivity)
         
         # Update the sequence with the new prediction (shift and append)
         sequence = np.roll(sequence, -1)
@@ -501,12 +454,25 @@ simulation_threads = {
 }
 
 
+# Enhanced streaming mechanism
+def generate_data(sensor_type):
+    while True:
+        with data_lock:
+            if simulated_data.get(sensor_type):
+                data = {sensor_type: simulated_data[sensor_type][-1]}
+                yield f"data: {json.dumps(data)}\n\n"
+            else:
+                yield f"data: {json.dumps({})}\n\n"
+        time.sleep(0.5)  # Reduced sleep time for faster streaming
+
+
+
 #model, 
-def prepare_single_row_for_prediction(features_array, model, scaler):
-    sample_row = features_array  
+def prepare_single_row_for_prediction(features_array, model, scaler,label_encoder):
+    sample_row = np.array(features_array)
 
     # Scaling features
-    sample_row_scaled = scaler.transform(sample_row)
+    sample_row_scaled = scaler.transform(sample_row.reshape(1, -1))
 
     # Predict using the ANN model
     prediction = model.predict(sample_row_scaled)
@@ -514,7 +480,6 @@ def prepare_single_row_for_prediction(features_array, model, scaler):
     # Get the predicted class index
     predicted_class_index = np.argmax(prediction)
 
-    label_encoder = LabelEncoder()
     # Decode the predicted class using the label encoder
     predicted_class = label_encoder.inverse_transform([predicted_class_index])
     
@@ -565,7 +530,8 @@ def predict_irrigation():
         prediction = prepare_single_row_for_prediction(
             data['features'], 
             ann_model,  # Using the conductivity model for prediction
-            StandardScaler
+            StandardScaler,
+            label_encoder
         )
         
         return jsonify({
@@ -587,46 +553,65 @@ def home():
 
 @app.route('/start_temp_simulation', methods=['GET'])
 def start_temperature_simulation():
-    sensor_simulator.simulation_threads["temperature"] = threading.Thread(target=run_simulation)
-    sensor_simulator.simulation_threads["temperature"].start()
+    simulated_data["temperature"].clear()
+    
+    if simulation_threads["temperature"] is None or not simulation_threads["temperature"].is_alive():
+        simulation_threads["temperature"] = threading.Thread(target=run_simulation)
+        simulation_threads["temperature"].start()
 
-    return Response(sensor_simulator.generate_data("temperature"), content_type='text/event-stream')
+    return Response(generate_data("temperature"), content_type='text/event-stream')
 
 
 @app.route('/start_humidity_simulation', methods=['GET'])
 def start_humidity_simulation():
-    sensor_simulator.simulation_threads["humidity"] = threading.Thread(target=run_humidity_simulation)
-    sensor_simulator.simulation_threads["humidity"].start()
-    return Response(sensor_simulator.generate_data("humidity"), content_type='text/event-stream')
+    simulated_data["humidity"].clear()
+
+    if simulation_threads["humidity"] is None or not simulation_threads["humidity"].is_alive():
+        simulation_threads["humidity"] = threading.Thread(target=run_humidity_simulation)
+        simulation_threads["humidity"].start()
+
+    return Response(generate_data("humidity"), content_type='text/event-stream')
 
 
 @app.route('/start_conductivity_simulation', methods=['GET'])
 def start_conductivity_simulation():
-    simulation_threads["conductivity"] = threading.Thread(target=run_condective_simulation)
-    simulation_threads["conductivity"].start()
+    simulated_data["conductivity"].clear()
 
-    return Response(sensor_simulator.generate_data("conductivity"), content_type='text/event-stream')
+    if simulation_threads["conductivity"] is None or not simulation_threads["conductivity"].is_alive():
+        simulation_threads["conductivity"] = threading.Thread(target=run_condective_simulation)
+        simulation_threads["conductivity"].start()
+
+    return Response(generate_data("conductivity"), content_type='text/event-stream')
 
 @app.route('/start_env_co2_simulation', methods=['GET'])
 def start_env_co2_simulation():
-    sensor_simulator.simulation_threads["env_co2"] = threading.Thread(target=run_env_co2_simulation)
-    sensor_simulator.simulation_threads["env_co2"].start()
+    simulated_data["env_co2"].clear()
+    
+    if simulation_threads["env_co2"] is None or not simulation_threads["env_co2"].is_alive():
+        simulation_threads["env_co2"] = threading.Thread(target=run_env_co2_simulation)
+        simulation_threads["env_co2"].start()
 
-    return Response(sensor_simulator.generate_data("env_co2"), content_type='text/event-stream')
+    return Response(generate_data("env_co2"), content_type='text/event-stream')
 
 @app.route('/start_env_temperature_simulation', methods=['GET'])
 def start_env_temperature_simulation():
-    sensor_simulator.simulation_threads["env_temperature"] = threading.Thread(target=run_env_temperature_simulation)
-    sensor_simulator.simulation_threads["env_temperature"].start()
+    simulated_data["env_temperature"].clear()
+    
+    if simulation_threads["env_temperature"] is None or not simulation_threads["env_temperature"].is_alive():
+        simulation_threads["env_temperature"] = threading.Thread(target=run_env_temperature_simulation)
+        simulation_threads["env_temperature"].start()
 
-    return Response(sensor_simulator.generate_data("env_temperature"), content_type='text/event-stream')
+    return Response(generate_data("env_temperature"), content_type='text/event-stream')
 
 @app.route('/start_env_humidity_simulation', methods=['GET'])
 def start_env_humidity_simulation():
-    sensor_simulator.simulation_threads["env_humidity"] = threading.Thread(target=run_env_humidity_simulation)
-    sensor_simulator.simulation_threads["env_humidity"].start()
+    simulated_data["env_humidity"].clear()
+    
+    if simulation_threads["env_humidity"] is None or not simulation_threads["env_humidity"].is_alive():
+        simulation_threads["env_humidity"] = threading.Thread(target=run_env_humidity_simulation)
+        simulation_threads["env_humidity"].start()
 
-    return Response(sensor_simulator.generate_data("env_humidity"), content_type='text/event-stream')
+    return Response(generate_data("env_humidity"), content_type='text/event-stream')
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
@@ -677,17 +662,19 @@ def recommend():
         print(f"An error occurred while processing the similarity matrix: {e}")
         return jsonify({"error": "An error occurred while processing the similarity matrix."}), 500
 
-@app.route('/start_all_simulations', methods=['GET'])
-def start_all_simulations():
-    """Start all sensor simulations concurrently"""
-    sensor_simulator.start_all_simulations()
-    return jsonify({"message": "All sensor simulations started concurrently"}), 200
+
 
 @app.route('/get_latest_sensor_data', methods=['GET'])
 def get_latest_sensor_data():
-    """Retrieve latest data for all sensors"""
-    latest_data = sensor_simulator.get_latest_sensor_data()
+    """
+    Retrieves the latest data for all sensors in a single API call
+    """
+    latest_data = {}
+    with data_lock:
+        for sensor_type, data in simulated_data.items():
+            if data:
+                latest_data[sensor_type] = data[-1]
+    
     return jsonify(latest_data)
-
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000, threaded=True)
