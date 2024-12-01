@@ -12,10 +12,6 @@ from datetime import datetime
 from collections import deque
 from flask_cors import CORS
 
-
-
-
-
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -204,8 +200,7 @@ def simulate_co2_sensor(model, initial_sequence, scaler, interval=1, steps=100):
         # Update sequence for next prediction
         sequence = np.roll(sequence, -1)
         sequence[-1] = next_scaled_value[0]
-
-        interval_variation = np.random.uniform(0.9, 1.1) 
+ 
         time.sleep(interval)
 
     
@@ -241,8 +236,7 @@ def simulate_env_temperature_sensor(model, initial_sequence, scaler, interval=1,
         sequence = np.roll(sequence, -1) 
         sequence[-1] = next_scaled_value[0] 
 
-       
-        interval_variation = np.random.uniform(0.9, 1.1) 
+        
         time.sleep(interval)
 def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
     """
@@ -304,7 +298,6 @@ def simulate_environmental_humidity_sensor(model, initial_sequence, scaler, inte
         sequence[-1] = next_scaled_value[0]
 
         # Time interval variation
-        interval_variation = np.random.uniform(0.9, 1.1)
         time.sleep(interval)
 
 
@@ -339,8 +332,7 @@ def simulate_temperature_sensor(model, initial_sequence, scaler, interval=1, ste
         sequence = np.roll(sequence, -1) 
         sequence[-1] = next_scaled_value[0] 
 
-       
-        interval_variation = np.random.uniform(0.9, 1.1) 
+        
         time.sleep(interval)
 
 def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
@@ -370,7 +362,6 @@ def simulate_soil_humidity_sensor(model, initial_sequence, scaler, interval=1, s
         sequence = np.roll(sequence, -1)
         sequence[-1] = next_scaled_value[0]
 
-        interval_variation = np.random.uniform(0.9, 1.1)
         time.sleep(interval)
 
 def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, interval=1, steps=100):
@@ -422,7 +413,6 @@ def simulate_electrical_conductivity_sensor(model, initial_sequence, scaler, int
         sequence[-1] = next_scaled_value[0]
         
         # Vary the interval slightly for more realism (±10%)
-        interval_variation = np.random.uniform(0.9, 1.1)
         time.sleep(interval)
 
 def run_simulation():
@@ -485,6 +475,12 @@ def prepare_single_row_for_prediction(features_array, model, scaler,label_encode
     
     return predicted_class[0]
 
+
+
+@app.route('/')
+def home():
+    return "Welcome to the Movie Sensores API!"
+
 @app.route('/predict_irrigation', methods=['POST'])
 def predict_irrigation():
     """
@@ -545,11 +541,6 @@ def predict_irrigation():
             "error": "An error occurred during prediction",
             "details": str(e)
         }), 500
-
-@app.route('/')
-def home():
-    return "Welcome to the Movie Sensores API!"
-
 
 @app.route('/start_temp_simulation', methods=['GET'])
 def start_temperature_simulation():
