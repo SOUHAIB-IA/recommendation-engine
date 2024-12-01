@@ -1,7 +1,7 @@
 name: Build and deploy Python app to Azure Web App
 
 env:
-  AZURE_WEBAPP_NAME: sensors1  # Set this to the name of your Azure Web App
+  AZURE_WEBAPP_NAME: recommendationmodel  # Set this to the name of your Azure Web App
   PYTHON_VERSION: '3.12'              # Adjust this to your Python version if different
 
 on:
@@ -72,7 +72,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: sensors1
+          app-name: recommendationmodel
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
          
       # If your app is served using a custom startup file like 'serve.py', Azure needs to know that
