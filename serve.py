@@ -454,8 +454,6 @@ def generate_data(sensor_type):
                 yield f"data: {json.dumps({})}\n\n"
         time.sleep(0.5)  # Reduced sleep time for faster streaming
 
-
-
 #model, 
 def prepare_single_row_for_prediction(features_array, model, scaler,label_encoder):
     sample_row = np.array(features_array)
