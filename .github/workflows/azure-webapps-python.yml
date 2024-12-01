@@ -2,7 +2,7 @@ name: Build and deploy Python app to Azure Web App
 
 env:
   AZURE_WEBAPP_NAME: recommendationmodel  # Set this to the name of your Azure Web App
-  PYTHON_VERSION: '3.11'  # Using Python 3.12 as configured in Azure
+  PYTHON_VERSION: '3.10'  # Using Python 3.12 as configured in Azure
 
 on:
   push:
