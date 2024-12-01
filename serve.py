@@ -478,7 +478,7 @@ def prepare_single_row_for_prediction(features_array, model, scaler):
     numerical_features = ['electrical_conductivity', 'soil_moisture', 'soil_temperature', 'env_humidity', 
                           'env_temperature', 'precipitations_mm', 'humidity', 'et0_fao', 'temp_difference']
                 
-    features_df[numerical_features] = scaler.fit_transform(features_df[numerical_features])
+    features_df[numerical_features] = scaler.transform(features_df[numerical_features])
 
     prediction = model.predict(features_df)
     
