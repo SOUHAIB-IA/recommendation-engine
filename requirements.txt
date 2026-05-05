@@ -123,7 +123,7 @@ plotly==5.24.1
 preshed==3.0.9
 proglog==0.1.10
 prompt_toolkit==3.0.47
-protobuf==4.25.5
+protobuf==5.29.6
 psutil==6.0.0
 psycopg2==2.9.9
 pure_eval==0.2.3
