@@ -149,7 +149,7 @@ schemdraw==0.15
 scikit-base==0.7.8
 scikit-learn==1.4.2
 scramp==1.4.5
-setuptools==75.1.0
+setuptools==78.1.1
 shellingham==1.5.4
 six==1.16.0
 smart-open==7.0.5
