@@ -113,7 +113,7 @@ orjson==3.10.9
 packaging==24.1
 pandocfilters==1.5.1
 parso==0.8.4
-pg8000==1.31.2
+pg8000==1.31.5
 pickleshare==0.7.5
 pillow==10.4.0
 pip-chill==1.0.3
